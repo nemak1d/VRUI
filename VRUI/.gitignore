@@ -3,7 +3,12 @@
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
+[Oo]culus/
+[Uu]niRx/
+[Pp]lugins/
 Assets/AssetStoreTools*
+Assets/Oculus*
+Assets/Plugins.meta
 
 # Visual Studio cache directory
 .vs/
