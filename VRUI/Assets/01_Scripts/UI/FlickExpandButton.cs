@@ -19,14 +19,14 @@ namespace N1D
 	/// <summary>
 	/// フリック展開ボタン.
 	/// </summary>
-	[RequireComponent(typeof(Button))]
+	[DisallowMultipleComponent, RequireComponent(typeof(Button), typeof(TypeConfiguration))]
 	public class FlickExpandButton : MonoBehaviour 
 	{
 		const float StartAngle = 90.0f * Mathf.Deg2Rad;
 
 		[Header("Binding Components")]
 		[SerializeField]
-		Button[] childrenButton = null;
+		TypeConfiguration[] childrenTypeConfig = null;
 		[Space]
 		
 		[Header("Local Parameters")]
@@ -52,15 +52,31 @@ namespace N1D
 			}
 		}
 
+		TypeConfiguration typeConfig;
+		TypeConfiguration TypeConfig
+		{
+			get
+			{
+				if (null == typeConfig)
+				{
+					typeConfig = this.GetOrAddComponent<TypeConfiguration>();
+				}
+				return typeConfig;
+			}
+		}
+
+
 		void Start()
 		{
+			SetVisibleChildren(false);
+
 			selector
 				.SetReference(StartAngle)
-				.SetPartitionCount(childrenButton.Length);
+				.SetPartitionCount(childrenTypeConfig.Length);
 
 			RootButton.OnLongPointerDownAsObservable()
 				.Where(_ => !isTriggered)
-				.Subscribe(x => OnOpenChildren(x))
+				.Subscribe(_ => OnOpenChildren())
 				.AddTo(this);
 
 			var onTriggerStream = RootButton.OnPointerDownAsObservable();
@@ -70,7 +86,7 @@ namespace N1D
 
 			var onReleaseStream = RootButton.OnPointerUpAsObservable();
 			onReleaseStream
-				.Subscribe(_ => OnCloseChildren())
+				.Subscribe(x => OnCloseChildren(x))
 				.AddTo(this);
 
 			var eventTrigger = gameObject.AddComponent<ObservableEventTrigger>();
@@ -98,29 +114,30 @@ namespace N1D
 		/// 子ボタンを開く.
 		/// </summary>
 		/// <param name="eventData"></param>
-		void OnOpenChildren(PointerEventData eventData)
+		void OnOpenChildren()
 		{
-			if (null != childrenButton)
-			{
-				for (int i = 0; i < childrenButton.Length; ++i)
-				{
-					childrenButton[i].gameObject.SetActive(true);
-				}
-			}
+			SetVisibleChildren(true);
 		}
 
 		/// <summary>
 		/// 子ボタンを閉じる.
 		/// </summary>
-		void OnCloseChildren()
+		void OnCloseChildren(PointerEventData eventData)
 		{
-			if (null != childrenButton)
+			flick.End(eventData.position);
+
+			int index = (validateFlickMagnitude > flick.SqrMagnitude) 
+				? -1 
+				: selector.GetIndex(flick.Angle);
+
+			TypeConfiguration target = TypeConfig;
+			if (0 <= index)
 			{
-				for (int i = 0; i < childrenButton.Length; ++i)
-				{
-					childrenButton[i].gameObject.SetActive(false);
-				}
+				target = childrenTypeConfig[index];
 			}
+			Debug.LogFormat("typed:{0}", target.Output);
+
+			SetVisibleChildren(false);
 		}
 
 		/// <summary>
@@ -164,9 +181,21 @@ namespace N1D
 		/// <param name="index">表示対象のインデックス</param>
 		void SwitchVisibleChildren(int index)
 		{
-			for (int i = 0; i < childrenButton.Length; ++i)
+			for (int i = 0; i < childrenTypeConfig.Length; ++i)
 			{
-				childrenButton[i].gameObject.SetActive(index == i);
+				childrenTypeConfig[i].gameObject.SetActive(index == i);
+			}
+		}
+
+		/// <summary>
+		/// 子ボタンすべての表示有無.
+		/// </summary>
+		/// <param name="isVisible">表示するか</param>
+		void SetVisibleChildren(bool isVisible)
+		{
+			for (int i = 0; i < childrenTypeConfig.Length; ++i)
+			{
+				childrenTypeConfig[i].gameObject.SetActive(isVisible);
 			}
 		}
 	}
