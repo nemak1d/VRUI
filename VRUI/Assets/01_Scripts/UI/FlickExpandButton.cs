@@ -57,10 +57,15 @@ namespace N1D
 			selector
 				.SetReference(StartAngle)
 				.SetPartitionCount(childrenButton.Length);
-			
+
+			RootButton.OnLongPointerDownAsObservable()
+				.Where(_ => !isTriggered)
+				.Subscribe(x => OnOpenChildren(x))
+				.AddTo(this);
+
 			var onTriggerStream = RootButton.OnPointerDownAsObservable();
 			onTriggerStream
-				.Subscribe(x => OnOpenChildren(x))
+				.Subscribe(x => OnBeginSelect(x))
 				.AddTo(this);
 
 			var onReleaseStream = RootButton.OnPointerUpAsObservable();
@@ -102,10 +107,6 @@ namespace N1D
 					childrenButton[i].gameObject.SetActive(true);
 				}
 			}
-
-			flick.Begin(eventData.position);
-
-			isTriggered = false;
 		}
 
 		/// <summary>
@@ -120,6 +121,17 @@ namespace N1D
 					childrenButton[i].gameObject.SetActive(false);
 				}
 			}
+		}
+
+		/// <summary>
+		/// 選択開始.
+		/// </summary>
+		/// <param name="eventData"></param>
+		void OnBeginSelect(PointerEventData eventData)
+		{
+			flick.Begin(eventData.position);
+
+			isTriggered = false;
 		}
 
 		/// <summary>
