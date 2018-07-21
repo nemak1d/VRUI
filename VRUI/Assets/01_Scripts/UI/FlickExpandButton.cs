@@ -171,8 +171,6 @@ namespace N1D
 			
 			int index = selector.GetIndex(flick.Angle);
 			SwitchVisibleChildren(index);
-
-			Debug.LogFormat("angle:{0}, index:{1}", flick.Angle * Mathf.Rad2Deg, index);
 		}
 
 		/// <summary>
