@@ -52,7 +52,7 @@ namespace N1D
 			}
 		}
 
-		TypeConfiguration typeConfig;
+		TypeConfiguration typeConfig = null;
 		TypeConfiguration TypeConfig
 		{
 			get
@@ -76,27 +76,28 @@ namespace N1D
 
 			RootButton.OnLongPointerDownAsObservable()
 				.Where(_ => !isTriggered)
-				.Subscribe(_ => OnOpenChildren())
+				.Subscribe(_ => ShowChildren())
 				.AddTo(this);
 
 			var onTriggerStream = RootButton.OnPointerDownAsObservable();
 			onTriggerStream
-				.Subscribe(x => OnBeginSelect(x))
+				.Subscribe(x => StartSelect(x))
 				.AddTo(this);
-
-			var onReleaseStream = RootButton.OnPointerUpAsObservable();
-			onReleaseStream
-				.Subscribe(x => OnCloseChildren(x))
-				.AddTo(this);
-
+			
 			var eventTrigger = gameObject.AddComponent<ObservableEventTrigger>();
 			eventTrigger.OnBeginDragAsObservable()
 				.SkipUntil(onTriggerStream)
 				.SelectMany(eventTrigger.OnDragAsObservable())
 				.TakeUntil(eventTrigger.OnEndDragAsObservable())
 				.RepeatUntilDestroy(gameObject)
-				.Subscribe(x => OnSelect(x))
+				.Subscribe(x => UpdateSelect(x))
 				.AddTo(this);
+
+			var onReleaseStream = RootButton.OnPointerUpAsObservable();
+			onReleaseStream
+				.Subscribe(x => EndSelect(x))
+				.AddTo(this);
+
 		}
 
 		void OnDestroy()
@@ -114,37 +115,17 @@ namespace N1D
 		/// 子ボタンを開く.
 		/// </summary>
 		/// <param name="eventData"></param>
-		void OnOpenChildren()
+		void ShowChildren()
 		{
 			SetVisibleChildren(true);
 		}
 
-		/// <summary>
-		/// 子ボタンを閉じる.
-		/// </summary>
-		void OnCloseChildren(PointerEventData eventData)
-		{
-			flick.End(eventData.position);
-
-			int index = (validateFlickMagnitude > flick.SqrMagnitude) 
-				? -1 
-				: selector.GetIndex(flick.Angle);
-
-			TypeConfiguration target = TypeConfig;
-			if (0 <= index)
-			{
-				target = childrenTypeConfig[index];
-			}
-			Debug.LogFormat("typed:{0}", target.Output);
-
-			SetVisibleChildren(false);
-		}
 
 		/// <summary>
 		/// 選択開始.
 		/// </summary>
 		/// <param name="eventData"></param>
-		void OnBeginSelect(PointerEventData eventData)
+		void StartSelect(PointerEventData eventData)
 		{
 			flick.Begin(eventData.position);
 
@@ -155,7 +136,7 @@ namespace N1D
 		/// 対象を選択.
 		/// </summary>
 		/// <param name="eventData"></param>
-		void OnSelect(PointerEventData eventData)
+		void UpdateSelect(PointerEventData eventData)
 		{
 			flick.End(eventData.position);
 
@@ -171,6 +152,27 @@ namespace N1D
 			
 			int index = selector.GetIndex(flick.Angle);
 			SwitchVisibleChildren(index);
+		}
+		
+		/// <summary>
+		/// 子ボタンを閉じる.
+		/// </summary>
+		void EndSelect(PointerEventData eventData)
+		{
+			flick.End(eventData.position);
+
+			int index = (validateFlickMagnitude > flick.SqrMagnitude)
+				? -1
+				: selector.GetIndex(flick.Angle);
+
+			TypeConfiguration target = TypeConfig;
+			if (0 <= index)
+			{
+				target = childrenTypeConfig[index];
+			}
+			Debug.LogFormat("typed:{0}", target.Output);
+
+			SetVisibleChildren(false);
 		}
 
 		/// <summary>
