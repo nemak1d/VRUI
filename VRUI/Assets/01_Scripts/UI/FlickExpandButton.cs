@@ -26,6 +26,8 @@ namespace N1D
 
 		[Header("Binding Components")]
 		[SerializeField]
+		InputField inputField = null;
+		[SerializeField]
 		TypeConfiguration[] childrenTypeConfig = null;
 		[Space]
 		
@@ -64,9 +66,22 @@ namespace N1D
 				return typeConfig;
 			}
 		}
+
+		InputField InputField
+		{
+			get
+			{
+				if (null == inputField)
+				{
+					inputField = this.GetOrAddComponent<InputField>();
+				}
+				return inputField;
+			}
+		}
 		
 		Subject<int> onSelectIndex = new Subject<int>();
 		IntReactiveProperty tapCount = new IntReactiveProperty(-1);
+		bool isUpdateInput = false;
 
 		void Start()
 		{
@@ -99,8 +114,6 @@ namespace N1D
 			onReleaseStream
 				.Subscribe(x => EndSelect(x))
 				.AddTo(this);
-
-
 			
 			onSelectIndex.Where(x => 0 <= x)
 				.Subscribe(x => OnEndFlick(x))
@@ -194,6 +207,12 @@ namespace N1D
 			TypeConfiguration target = childrenTypeConfig[index];
 			Debug.LogFormat("typed:{0}", target.Output);
 
+			if (isUpdateInput && 0 < inputField.text.Length)
+			{
+				inputField.text = inputField.text.Substring(0, inputField.text.Length - 1);
+			}
+			inputField.text += target.Output;
+
 			SetVisibleChildren(false);
 		}
 
@@ -203,6 +222,7 @@ namespace N1D
 		/// <param name="index"></param>
 		void OnEndFlick(int index)
 		{
+			isUpdateInput = false;
 			Output(index);
 
 			tapCount.Value = -1;
@@ -215,8 +235,9 @@ namespace N1D
 		void OnEndTap(int index)
 		{
 			tapCount.Value = (1 + tapCount.Value) % childrenTypeConfig.Length;
+			isUpdateInput = true;
 		}
-		
+
 		/// <summary>
 		/// 子ボタンの表示切替.
 		/// </summary>
