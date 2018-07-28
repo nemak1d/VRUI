@@ -64,7 +64,9 @@ namespace N1D
 				return typeConfig;
 			}
 		}
-
+		
+		Subject<int> onSelectIndex = new Subject<int>();
+		IntReactiveProperty tapCount = new IntReactiveProperty(-1);
 
 		void Start()
 		{
@@ -98,6 +100,18 @@ namespace N1D
 				.Subscribe(x => EndSelect(x))
 				.AddTo(this);
 
+
+			
+			onSelectIndex.Where(x => 0 <= x)
+				.Subscribe(x => OnEndFlick(x))
+				.AddTo(this);
+			onSelectIndex.Where(x => 0 > x)
+				.Subscribe(x => OnEndTap(x))
+				.AddTo(this);
+
+			tapCount.Where(x => 0 <= x)
+				.Subscribe(x => Output(x))
+				.AddTo(this);
 		}
 
 		void OnDestroy()
@@ -161,20 +175,45 @@ namespace N1D
 		{
 			flick.End(eventData.position);
 
-			int index = (validateFlickMagnitude > flick.SqrMagnitude)
-				? -1
+			int index = (!isTriggered)
+				? -1	// タップ判定
 				: selector.GetIndex(flick.Angle);
+			
+			onSelectIndex.OnNext(index);
+		}
 
-			TypeConfiguration target = TypeConfig;
-			if (0 <= index)
-			{
-				target = childrenTypeConfig[index];
-			}
+		/// <summary>
+		/// 出力.
+		/// </summary>
+		/// <param name="index"></param>
+		void Output(int index)
+		{
+			TypeConfiguration target = childrenTypeConfig[index];
 			Debug.LogFormat("typed:{0}", target.Output);
 
 			SetVisibleChildren(false);
 		}
 
+		/// <summary>
+		/// フリック処理.
+		/// </summary>
+		/// <param name="index"></param>
+		void OnEndFlick(int index)
+		{
+			Output(index);
+
+			tapCount.Value = -1;
+		}
+
+		/// <summary>
+		/// タップ処理.
+		/// </summary>
+		/// <param name="index"></param>
+		void OnEndTap(int index)
+		{
+			tapCount.Value = (1 + tapCount.Value) % childrenTypeConfig.Length;
+		}
+		
 		/// <summary>
 		/// 子ボタンの表示切替.
 		/// </summary>
