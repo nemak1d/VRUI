@@ -106,7 +106,10 @@ namespace N1D
 				.Subscribe(x => OnEndFlick(x))
 				.AddTo(this);
 			onSelectIndex.Where(x => 0 > x)
-				.Subscribe(x => OnEndTap(x))
+				.Do(x => OnEndTap(x))
+				.Throttle(System.TimeSpan.FromSeconds(1.0f))
+				.Where(_ => !isTriggered)
+				.Subscribe(_ => { tapCount.Value = -1; })
 				.AddTo(this);
 
 			tapCount.Where(x => 0 <= x)
